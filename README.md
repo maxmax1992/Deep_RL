@@ -1,1 +1,2 @@
-# Q_learning
+# Deep RL
+Different reinforcement learning approaches.
