@@ -13,8 +13,23 @@ from baselines import deepq
 from baselines.common.atari_wrappers import make_atari
 from keras.optimizers import Adam
 
+
 env = make_atari('BreakoutNoFrameskip-v4')
 env = deepq.wrap_atari_dqn(env)
+
+#baselines deepq hyperparameters:
+    # env -> enviroment
+    # q_func = model, -> CNN
+    # lr = 1e-4,    ->  learning rate
+    # max_timesteps = args.num_timesteps,
+    # buffer_size = 10000,
+    # exploration_fraction = 0.1,
+    # exploration_final_eps = 0.01,
+    # train_freq = 4,
+    # learning_starts = 10000,
+    # target_network_update_freq = 1000,
+    # gamma = 0.99,
+    # prioritized_replay = bool(args.prioritized)
 
 
 class QNetwork:
@@ -103,11 +118,18 @@ def plot_rewards(rewards):
     plt.show()
 
 
+
 e_start = float(1.00)
 e_end = float(0.10)
 decay_frames = 1000000
 change = float(e_start - e_end) / float(1000000)
 epsilon = e_start
+sum = 0
+test_e = epsilon
+for i in range(1, 1000000):
+    test_e -= change
+print('test_e', test_e)
+
 
 df = 0.99
 rewards = []
@@ -121,6 +143,7 @@ frame = 0
 showedFirst = False
 rewards = []
 
+ep = 0
 for i in range(0, 5000000):
 
     frame += 1
@@ -128,9 +151,20 @@ for i in range(0, 5000000):
     state = env.reset()
     action = env.action_space.sample()
     totalReward = 0
+    ep += 1
 
     while not done:
+
+        #skip frames and repeat same action
+        if frame % 4 is not 0:
+            frame += 1
+            state1, reward, done, _ = env.step(action)
+            totalReward += reward
+            state = state1
+            continue
+
         randaction_p = random.uniform(0, 1)
+
         if randaction_p < epsilon:
             action = env.action_space.sample()
             # print('random action', action)
@@ -143,7 +177,7 @@ for i in range(0, 5000000):
 
         replay_memory.append(Memory(state, action, reward, done, state1))
 
-        if frame % 4 == 0:
+        if frame % 120 == 0:
             batch = np.random.choice(replay_memory, min(32, len(replay_memory)), False)
             X, Y = processBatch(batch, df, DQN, DQN_target)
             DQN.fit(X, Y)
@@ -154,8 +188,13 @@ for i in range(0, 5000000):
         # if frame % 500 == 0:
         #     plot_rewards(rewards)
 
+        if ep % 50 is 0:
+            DQN.saveModel()
+
         state = state1
-        env.render()
+        # env.render()
         frame += 1
         epsilon -= change
     rewards.append(totalReward)
+    print('episode: {}, epsilon: {}, frames: {}, totReward: {}' .format(ep, epsilon, frame, totalReward))
+
