@@ -2,4 +2,6 @@
 .idea/
 .gym/
 .baselines/
-
+/Keras_env/**
+/gym/*
+/baselines/**

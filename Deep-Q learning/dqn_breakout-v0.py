@@ -33,18 +33,18 @@ env = deepq.wrap_atari_dqn(env)
 
 
 class QNetwork:
-    def __init__(self, learning_rate=0.01, action_space=4, model=None):
+    def __init__(self, learning_rate=0.0025, action_space=4, model=None):
         # state inputs to the Q-network
         if model is not None:
             self.model = model
             return
         self.model = Sequential()
 
-        self.model.add(Conv2D(16, (8, 8), strides=(4, 4), activation='relu',
-                              input_shape=(84, 84, 4)))
-        self.model.add(Conv2D(32, (4, 4), strides=(2, 2), activation='relu'))
+        self.model.add(Conv2D(32, (8, 8), strides=(4, 4), activation='relu',
+                         input_shape=(84, 84, 4)))
+        self.model.add(Conv2D(64, (4, 4), strides=(2, 2), activation='relu'))
+        self.model.add(Conv2D(64, (3, 3), activation='relu'))
         self.model.add(Flatten())
-
         self.model.add(Dense(256, activation='relu'))
         self.model.add(Dense(action_space, activation='linear'))
 
@@ -82,13 +82,6 @@ class QNetwork:
         return self.model.get_weights()
 
 
-def visualizeFrames(obs):
-    for i in range(0, 4):
-        elem = obs[:, :, i]
-        plt.imshow(np.array(np.squeeze(elem)))
-        plt.show()
-
-
 def processBatch(data_arr, df, DQN, DQN_target):
     X, Y = [], []
     for elem in data_arr:
@@ -96,7 +89,7 @@ def processBatch(data_arr, df, DQN, DQN_target):
         y = DQN.predict(s1)
         y[action] = reward
         if not done:
-            y[action] = df * max(DQN_target.predict(s2))
+            y[action] = reward + df * max(DQN_target.predict(s2))
         X.append(s1)
         Y.append(y)
     return np.array(X), np.array(Y)
@@ -110,13 +103,6 @@ class Memory:
         return self.values
 
 
-def plot_rewards(rewards):
-    # plot all rewards
-    plt.plot(rewards)
-    plt.ylabel('reward')
-    plt.xlabel('episode')
-    plt.show()
-
 
 
 e_start = float(1.00)
@@ -126,9 +112,6 @@ change = float(e_start - e_end) / float(1000000)
 epsilon = e_start
 sum = 0
 test_e = epsilon
-for i in range(1, 1000000):
-    test_e -= change
-print('test_e', test_e)
 
 
 df = 0.99
@@ -137,13 +120,14 @@ rewards = []
 DQN = QNetwork()
 DQN_target = DQN.copyModel()
 
-replay_memory = deque([], maxlen=3000)
+replay_memory = deque([], maxlen=1000000)
 
 frame = 0
 showedFirst = False
 rewards = []
 
 ep = 0
+randPolicy = True
 for i in range(0, 5000000):
 
     frame += 1
@@ -153,19 +137,30 @@ for i in range(0, 5000000):
     totalReward = 0
     ep += 1
 
+
+    if randPolicy and frame > 50000:
+        randPolicy = False
+
     while not done:
+
+        # env.render()
+        if frame % 10000 == 0:
+            DQN_target.setWeights(DQN.getWeights())
 
         #skip frames and repeat same action
         if frame % 4 is not 0:
             frame += 1
+
             state1, reward, done, _ = env.step(action)
+            replay_memory.append(Memory(state, action, reward, done, state1))
+
             totalReward += reward
             state = state1
             continue
 
         randaction_p = random.uniform(0, 1)
 
-        if randaction_p < epsilon:
+        if randaction_p < epsilon or randPolicy:
             action = env.action_space.sample()
             # print('random action', action)
         else:
@@ -173,28 +168,32 @@ for i in range(0, 5000000):
             # print('action', action)
 
         state1, reward, done, info = env.step(action)
-        reward += totalReward
+        totalReward += reward
 
         replay_memory.append(Memory(state, action, reward, done, state1))
 
-        if frame % 120 == 0:
-            batch = np.random.choice(replay_memory, min(32, len(replay_memory)), False)
+        if not randPolicy:
+            batch = random.sample(replay_memory, min(32, len(replay_memory)))
             X, Y = processBatch(batch, df, DQN, DQN_target)
             DQN.fit(X, Y)
-        if frame % 100 == 0:
-            DQN_target.setWeights(DQN.getWeights())
-
-        #plotting
-        # if frame % 500 == 0:
-        #     plot_rewards(rewards)
-
-        if ep % 50 is 0:
-            DQN.saveModel()
+            #plotting
+            # if frame % 500 == 0:
+            #     plot_rewards(rewards)
 
         state = state1
         # env.render()
         frame += 1
-        epsilon -= change
+        epsilon = max(epsilon - change, e_end)
+
+    if ep % 100 is 0:
+
+        DQN.saveModel()
+
+        a = plt.plot(rewards)
+        plt.ylabel('reward')
+        plt.xlabel('episode')
+        plt.savefig('rewardsPlot.png')
+
     rewards.append(totalReward)
     print('episode: {}, epsilon: {}, frames: {}, totReward: {}' .format(ep, epsilon, frame, totalReward))
 
