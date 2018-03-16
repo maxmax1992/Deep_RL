@@ -141,7 +141,7 @@ for i in range(0, 1000):
         replay_memory.append(Memory(state, action, reward, done, state1))
 
 
-        batch = np.random.choice(replay_memory, min(32, len(replay_memory)),False)
+        batch = np.random.choice(replay_memory, min(32, len(replay_memory)), False)
 
         X, Y = processBatch(batch, df, DQN, DQN_target)
         DQN.fit(X, Y)
