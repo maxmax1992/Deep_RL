@@ -10,6 +10,10 @@ Different reinforcement learning approaches.
 [keras](https://keras.io/)
 
 ## 2. train the model
-cd Deep-Q\ Learning
+```
+cd Deep-Q\ Learning/
+```
+```
 python dqn_cartPole-v0.py
+```
     
