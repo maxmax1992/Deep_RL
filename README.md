@@ -3,7 +3,7 @@ Different reinforcement learning approaches.
 
 ## 1. Install dependencies
     1. Install gym, keras, baselines, and needed packages
-[gym](https://github.com/openai/gym):
+[gym](https://github.com/openai/gym)
     
 [baselines](https://github.com/openai/baselines) (useful for enviroment preprocessing)
 
