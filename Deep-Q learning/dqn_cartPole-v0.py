@@ -93,7 +93,7 @@ class Memory:
 
 e_start = float(1.00)
 e_end = float(0.05)
-decay_frames = 1000
+decay_frames = 10000
 change = float(e_start - e_end) / float(decay_frames)
 epsilon = e_start
 sum = 0
@@ -106,7 +106,7 @@ rewards = []
 DQN = QNetwork()
 DQN_target = DQN.copyModel()
 
-replay_memory = deque([], maxlen=1000)
+replay_memory = deque([], maxlen=10000)
 
 frame = 0
 showedFirst = False
