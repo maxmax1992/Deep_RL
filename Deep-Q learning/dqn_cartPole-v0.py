@@ -1,32 +1,14 @@
 from collections import deque
-
 import numpy as np
 import keras
 import random
 import gym
 import matplotlib.pyplot as plt
 from keras.models import Sequential
-from keras.layers import Dense, Flatten
-from keras.layers import Conv2D
+from keras.layers import Dense
 from keras.optimizers import Adam
 
-
 env = gym.make('CartPole-v0')
-
-#baselines deepq hyperparameters:
-    # env -> enviroment
-    # q_func = model, -> CNN
-    # lr = 1e-4,    ->  learning rate
-    # max_timesteps = args.num_timesteps,   ->
-    # buffer_size = 10000,
-    # exploration_fraction = 0.1,
-    # exploration_final_eps = 0.01,
-    # train_freq = 4,
-    # learning_starts = 10000,
-    # target_network_update_freq = 1000,
-    # gamma = 0.99,
-    # prioritized_replay = bool(args.prioritized)
-
 
 class QNetwork:
     def __init__(self, learning_rate=0.0025, state_space=4, action_space=2, model=None):
@@ -126,31 +108,22 @@ for i in range(0, 1000):
 
         env.render()
         randaction_p = random.uniform(0, 1)
-
         if randaction_p < epsilon:
             action = env.action_space.sample()
-            # print('random action', action)
         else:
             action = np.argmax(DQN.predict(state))
-            # print('action', action)
 
         state1, reward, done, info = env.step(action)
         totalReward += 1
 
-
         replay_memory.append(Memory(state, action, reward, done, state1))
-
-
         batch = np.random.choice(replay_memory, min(32, len(replay_memory)), False)
-
         X, Y = processBatch(batch, df, DQN, DQN_target)
         DQN.fit(X, Y)
 
         if frame % 50 == 0:
             DQN_target.setWeights(DQN.getWeights())
-
         state = state1
-
         frame += 1
         epsilon = max(epsilon - change, e_end)
 
@@ -158,7 +131,6 @@ for i in range(0, 1000):
     print('episode: {}, epsilon: {}, frames: {}, totalSteps: {}' .format(ep, epsilon, frame, totalReward))
 
 def plot_rewards(rewards):
-    # plot all rewards
     plt.plot(rewards)
     plt.ylabel('reward')
     plt.xlabel('episode')
