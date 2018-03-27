@@ -14,7 +14,6 @@ env = deepq.wrap_atari_dqn(env)
 def processBatch(data_arr, df, DQN, DQN_target):
     X, Y = [], []
     for elem in data_arr:
-        print('--------')
         s1, action, reward, done, s2 = elem.getValues()
         y = DQN.predict(s1)
         y[action] = reward
