@@ -16,12 +16,13 @@ def huber_loss(a, b, in_keras=True):
     return use_linear_term * linear_term + (1-use_linear_term) * quadratic_term
 
 class QNetwork:
-    def __init__(self, learning_rate=0.0025, action_space=4, model=None, lr=0.00025):
+    def __init__(self, weightsName='TestModelWeights.h5', action_space=4, model=None, lr=0.00025):
         # state inputs to the Q-network
         if model is not None:
             self.model = model
             return
         self.model = Sequential()
+        self.weightsName=weightsName
 
         self.model.add(Conv2D(32, (8, 8), strides=(4, 4), activation='relu',
                          input_shape=(84, 84, 4)))
@@ -46,14 +47,16 @@ class QNetwork:
         copy_model.set_weights(self.model.get_weights())
         return QNetwork(model=copy_model)
 
-    def saveModel(self, filename='breakout-v0-weights-v0.h5'):
-        self.model.save_weights(filename)
+    def saveModel(self):
+        self.model.save_weights(self.weightsName)
 
-    def loadModel(self, filename='breakout-v0-weights-v0.h5'):
-        self.model.load_weights(filename)
+    def loadModel(self):
+        self.model.load_weights(self.weightsName)
 
     def predict(self, state):
-        return self.model.predict(np.array([state]))[0]
+        prediction = self.model.predict(np.array([state]))[0]
+        return prediction
+
 
     def fit(self, x, y):
         self.model.fit(x=x, y=y, shuffle=False, verbose=False)
@@ -63,3 +66,4 @@ class QNetwork:
 
     def getWeights(self):
         return self.model.get_weights()
+

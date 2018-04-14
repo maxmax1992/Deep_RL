@@ -13,20 +13,6 @@ from keras.optimizers import Adam
 
 env = gym.make('CartPole-v0')
 
-#baselines deepq hyperparameters:
-    # env -> enviroment
-    # q_func = model, -> CNN
-    # lr = 1e-4,    ->  learning rate
-    # max_timesteps = args.num_timesteps,   ->
-    # buffer_size = 10000,
-    # exploration_fraction = 0.1,
-    # exploration_final_eps = 0.01,
-    # train_freq = 4,
-    # learning_starts = 10000,
-    # target_network_update_freq = 1000,
-    # gamma = 0.99,
-    # prioritized_replay = bool(args.prioritized)
-
 
 class QNetwork:
     def __init__(self, learning_rate=0.0025, state_space=4, action_space=2, model=None):
