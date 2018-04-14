@@ -69,7 +69,7 @@ for i in range(0, 5000000):
 
     while not done:
         epsilon = max(epsilon - change, e_end)
-        env.render()
+        # env.render()
         if frame % 5000 == 0:
             DQN_target.setWeights(DQN.getWeights())
 
