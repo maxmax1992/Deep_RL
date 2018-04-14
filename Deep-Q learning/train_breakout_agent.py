@@ -8,6 +8,7 @@ from Deep_QNet import QNetwork
 
 # wrap atari to nicer preprocessed environment
 env = make_atari('PongNoFrameskip-v4')
+action_sp = env.action_space.n
 
 env = deepq.wrap_atari_dqn(env)
 
@@ -41,7 +42,7 @@ epsilon = e_start
 df = 0.99
 rewards = []
 
-DQN = QNetwork(lr = 0.0025, weightsName='pong-weights-1.h5')
+DQN = QNetwork(action_space=action_sp, lr = 0.0025, weightsName='pong-weights-1.h5')
 
 DQN_target = DQN.copyModel()
 

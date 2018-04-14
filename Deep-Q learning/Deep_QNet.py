@@ -21,6 +21,7 @@ class QNetwork:
         if model is not None:
             self.model = model
             return
+        self.action_space = action_space
         self.model = Sequential()
         self.weightsName=weightsName
 
@@ -45,7 +46,7 @@ class QNetwork:
     def copyModel(self):
         copy_model = keras.models.clone_model(self.model)
         copy_model.set_weights(self.model.get_weights())
-        return QNetwork(model=copy_model)
+        return QNetwork(model=copy_model, action_space=self.action_space)
 
     def saveModel(self):
         self.model.save_weights(self.weightsName)
