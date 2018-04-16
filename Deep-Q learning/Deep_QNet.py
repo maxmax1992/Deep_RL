@@ -4,16 +4,18 @@ from keras import backend as K
 from keras.models import Sequential
 from keras.layers import Dense, Flatten
 from keras.layers import Conv2D
+from keras import losses
 
-def huber_loss(a, b, in_keras=True):
-    error = a - b
-    quadratic_term = error*error / 2
-    linear_term = abs(error) - 1/2
-    use_linear_term = (abs(error) > 1.0)
-    if in_keras:
-        # Keras won't let us multiply floats by booleans, so we explicitly cast the booleans to floats
-        use_linear_term = K.cast(use_linear_term, 'float32')
-    return use_linear_term * linear_term + (1-use_linear_term) * quadratic_term
+
+# def huber_loss(a, b, in_keras=True):
+#     error = a - b
+#     quadratic_term = error*error / 2
+#     linear_term = abs(error) - 1/2
+#     use_linear_term = (abs(error) > 1.0)
+#     if in_keras:
+#         # Keras won't let us multiply floats by booleans, so we explicitly cast the booleans to floats
+#         use_linear_term = K.cast(use_linear_term, 'float32')
+#     return use_linear_term * linear_term + (1-use_linear_term) * quadratic_term
 
 class QNetwork:
     def __init__(self, weightsName='TestModelWeights.h5', action_space=4, model=None, lr=0.00025):
@@ -33,15 +35,15 @@ class QNetwork:
         self.model.add(Dense(256, activation='relu'))
         self.model.add(Dense(action_space, activation='linear'))
 
-        self.optimizer = keras.optimizers.RMSprop(
-            lr=lr, rho=0.95, epsilon=0.01
-        )
+        # self.optimizer = keras.optimizers.RMSprop(
+        #     lr=lr, rho=0.95, epsilon=0.01
+        # )
         # if os.path.exists('breakout-v0-weights-v0.h5'):
         #     self.loadModel()
         #     print('loaded nn weights from file')
 
-        self.model.compile(loss=huber_loss,
-                           optimizer=self.optimizer)
+        self.model.compile(loss=losses.mean_absolute_error,
+                           optimizer='adam')
 
     def copyModel(self):
         copy_model = keras.models.clone_model(self.model)

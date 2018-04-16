@@ -4,13 +4,15 @@ import random
 from baselines import deepq
 from baselines.common.atari_wrappers import make_atari
 from Deep_QNet import QNetwork
+from baselines.common import set_global_seeds
+
 
 
 # wrap atari to nicer preprocessed environment
 env = make_atari('PongNoFrameskip-v4')
 action_sp = env.action_space.n
-
 env = deepq.wrap_atari_dqn(env)
+set_global_seeds(7)
 
 # learn on batch of transitions
 def processBatch(data_arr, df, DQN, DQN_target):
@@ -35,8 +37,8 @@ class Memory:
 
 e_start = float(1.00)
 e_end = float(0.10)
-decay_frames = 500000
-change = float(e_start - e_end) / float(1000000)
+decay_frames = 1000000
+change = float(e_start - e_end) / float(decay_frames)
 epsilon = e_start
 
 df = 0.99
@@ -46,7 +48,7 @@ DQN = QNetwork(action_space=action_sp, lr = 0.0025, weightsName='pong-weights-1.
 
 DQN_target = DQN.copyModel()
 
-replay_memory = deque([], maxlen=100000)
+replay_memory = deque([], maxlen=500000)
 
 frame = 0
 learnStep = 0
@@ -70,7 +72,7 @@ for i in range(0, 5000000):
 
     while not done:
         epsilon = max(epsilon - change, e_end)
-        # env.render()
+        env.render()
         if frame % 5000 == 0:
             DQN_target.setWeights(DQN.getWeights())
 
@@ -86,7 +88,7 @@ for i in range(0, 5000000):
 
         replay_memory.append(Memory(state, action, reward, done, state1))
 
-        if not randPolicy and frame % 16 is 0:
+        if not randPolicy and frame % 4 is 0:
             batch = random.sample(replay_memory, min(32, len(replay_memory)))
             X, Y = processBatch(batch, df, DQN, DQN_target)
             DQN.fit(X, Y)
