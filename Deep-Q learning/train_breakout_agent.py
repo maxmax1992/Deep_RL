@@ -48,7 +48,7 @@ DQN = QNetwork(action_space=action_sp, lr = 0.0025, weightsName='pong-weights-1.
 
 DQN_target = DQN.copyModel()
 
-replay_memory = deque([], maxlen=500000)
+replay_memory = deque([], maxlen=200000)
 
 frame = 0
 learnStep = 0
@@ -72,8 +72,8 @@ for i in range(0, 5000000):
 
     while not done:
         epsilon = max(epsilon - change, e_end)
-        env.render()
-        if frame % 5000 == 0:
+        # env.render()
+        if frame % 10000 == 0:
             DQN_target.setWeights(DQN.getWeights())
 
         randaction_p = random.uniform(0, 1)
@@ -88,7 +88,7 @@ for i in range(0, 5000000):
 
         replay_memory.append(Memory(state, action, reward, done, state1))
 
-        if not randPolicy and frame % 4 is 0:
+        if not randPolicy and frame % 50 is 0:
             batch = random.sample(replay_memory, min(32, len(replay_memory)))
             X, Y = processBatch(batch, df, DQN, DQN_target)
             DQN.fit(X, Y)
