@@ -9,10 +9,13 @@ from keras.models import Sequential
 from keras.layers import Dense, Flatten
 from keras.layers import Conv2D
 from keras.optimizers import Adam
+from baselines.common import set_global_seeds
 
 
 env = gym.make('CartPole-v0')
-env.max_episode_steps = 500
+env._max_episode_steps = 500
+print('MAX STEPS', env._max_episode_steps)
+set_global_seeds(7)
 
 class QNetwork:
     def __init__(self, learning_rate=0.0025, state_space=4, action_space=2, model=None):
@@ -23,13 +26,12 @@ class QNetwork:
         # state inputs to the Q-network
         self.model = Sequential()
         self.model.add(Dense(8, activation='relu', input_dim=state_space))
-        self.model.add(Dense(16, activation='relu'))
+        self.model.add(Dense(10, activation='relu'))
+        self.model.add(Dense(10, activation='relu'))
         self.model.add(Dense(action_space, activation='linear'))
 
-        self.optimizer = Adam(lr=learning_rate)
-        self.model.compile(loss='mse',
-                           optimizer=self.optimizer,
-                           metrics=['accuracy'])
+        self.model.compile(loss='mae',
+                           optimizer='adam')
 
     def copyModel(self):
         copy_model = keras.models.clone_model(self.model)
@@ -84,10 +86,10 @@ def plot_rewards(rewards):
     plt.show()
 
 
-def train():
+def train(eps=100):
     e_start = float(1.00)
     e_end = float(0.05)
-    decay_frames = 1000
+    decay_frames = 5000
     change = float(e_start - e_end) / float(decay_frames)
     epsilon = e_start
     sum = 0
@@ -99,14 +101,14 @@ def train():
     DQN = QNetwork()
     DQN_target = DQN.copyModel()
 
-    replay_memory = deque([], maxlen=1000)
+    replay_memory = deque([], maxlen=2000)
 
     frame = 0
     showedFirst = False
     rewards = []
 
     ep = 0
-    for i in range(0, 1000):
+    for i in range(1, eps + 1):
 
         frame += 1
         done = False
@@ -137,7 +139,7 @@ def train():
             X, Y = processBatch(batch, df, DQN, DQN_target)
             DQN.fit(X, Y)
 
-            if frame % 50 == 0:
+            if frame % 500 == 0:
                 DQN_target.setWeights(DQN.getWeights())
 
             state = state1
@@ -151,5 +153,5 @@ def train():
     plot_rewards(rewards)
 
 if __name__ == "__main__":
-    train()
+    train(200)
 
