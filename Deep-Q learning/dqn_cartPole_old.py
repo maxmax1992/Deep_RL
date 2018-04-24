@@ -12,7 +12,7 @@ from keras.optimizers import Adam
 
 
 env = gym.make('CartPole-v0')
-env.max_episode_steps = 500
+env._max_episode_steps = 500
 
 class QNetwork:
     def __init__(self, learning_rate=0.0025, state_space=4, action_space=2, model=None):
@@ -84,9 +84,9 @@ def plot_rewards(rewards):
     plt.show()
 
 
-def train():
+def train(eps=100):
     e_start = float(1.00)
-    e_end = float(0.05)
+    e_end = float(0.10)
     decay_frames = 1000
     change = float(e_start - e_end) / float(decay_frames)
     epsilon = e_start
@@ -106,7 +106,7 @@ def train():
     rewards = []
 
     ep = 0
-    for i in range(0, 1000):
+    for i in range(0, eps):
 
         frame += 1
         done = False
@@ -151,5 +151,5 @@ def train():
     plot_rewards(rewards)
 
 if __name__ == "__main__":
-    train()
+    train(300)
 
