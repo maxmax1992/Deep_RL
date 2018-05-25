@@ -11,6 +11,7 @@ from keras.layers import Dense, Flatten
 from keras.layers import Conv2D
 from keras import backend as K
 from keras.optimizers import Adam
+from baselines.common import set_global_seeds
 
 
 env = gym.make('CartPole-v0')
@@ -25,13 +26,12 @@ class QNetwork:
         # state inputs to the Q-network
         self.model = Sequential()
         self.model.add(Dense(8, activation='relu', input_dim=state_space))
-        self.model.add(Dense(16, activation='relu'))
+        self.model.add(Dense(10, activation='relu'))
+        self.model.add(Dense(10, activation='relu'))
         self.model.add(Dense(action_space, activation='linear'))
 
-        self.optimizer = Adam(lr=learning_rate)
-        self.model.compile(loss='mse',
-                           optimizer=self.optimizer,
-                           metrics=['accuracy'])
+        self.model.compile(loss='mae',
+                           optimizer='adam')
 
     def copyModel(self):
         copy_model = keras.models.clone_model(self.model)
@@ -117,7 +117,6 @@ def train(eps=100, use_replay=True, use_target=True, rand_agent=False):
     rewards = []
     ep = 0
     for i in range(0, eps):
-
         frame += 1
         done = False
         state = env.reset()
@@ -154,6 +153,7 @@ def train(eps=100, use_replay=True, use_target=True, rand_agent=False):
                 X, Y = processBatch(batch, df, DQN, DQN)
             DQN.fit(X, Y)
 
+
             if frame % 50 == 0 and use_target:
                 DQN_target.setWeights(DQN.getWeights())
 
@@ -172,4 +172,5 @@ if __name__ == "__main__":
     plot_rewards(train(300, use_replay=False, use_target=True, rand_agent=False), './plots/learning_result_2.png', label='TN', plotnum=1)
     plot_rewards(train(300, use_replay=True, use_target=True, rand_agent=False), './plots/learning_result_3.png', label='TM + RN', plotnum=2)
     K.clear_session()
+
 
