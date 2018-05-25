@@ -5,9 +5,11 @@ import keras
 import random
 import gym
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 from keras.models import Sequential
 from keras.layers import Dense, Flatten
 from keras.layers import Conv2D
+from keras import backend as K
 from keras.optimizers import Adam
 
 
@@ -75,36 +77,44 @@ class Memory:
     def getValues(self):
         return self.values
 
+colors = ['red', 'blue', 'green']
+patches = []
 
-def plot_rewards(rewards):
+def plot_rewards(rewards, saveName, label, plotnum):
     # plot all rewards
-    plt.plot(rewards)
+    plt.plot(rewards, color=colors[plotnum])
     plt.ylabel('reward')
     plt.xlabel('episode')
-    plt.show()
+    color_patch = mpatches.Patch(color=colors[plotnum], label=label)
+    patches.append(color_patch)
+    plt.legend(handles=patches)
+    plt.savefig(saveName)
 
 
-def train(eps=100):
+def train(eps=100, use_replay=True, use_target=True, rand_agent=False):
+    last10_avg = deque([], maxlen=10)
     e_start = float(1.00)
     e_end = float(0.10)
     decay_frames = 1000
     change = float(e_start - e_end) / float(decay_frames)
     epsilon = e_start
-    sum = 0
     test_e = epsilon
 
     df = 0.99
     rewards = []
 
     DQN = QNetwork()
-    DQN_target = DQN.copyModel()
+    DQN_target = None
+    if use_target:
+        DQN_target = DQN.copyModel()
 
-    replay_memory = deque([], maxlen=1000)
+
+    replay_memory = None
+    if use_replay:
+        replay_memory = deque([], maxlen=1000)
 
     frame = 0
-    showedFirst = False
     rewards = []
-
     ep = 0
     for i in range(0, eps):
 
@@ -120,7 +130,7 @@ def train(eps=100):
             # env.render()
             randaction_p = random.uniform(0, 1)
 
-            if randaction_p < epsilon:
+            if rand_agent or randaction_p < epsilon:
                 action = env.action_space.sample()
                 # print('random action', action)
             else:
@@ -130,26 +140,36 @@ def train(eps=100):
             state1, reward, done, info = env.step(action)
             totalReward += 1
 
-            replay_memory.append(Memory(state, action, reward, done, state1))
+            batch = None
+            if use_replay:
+                replay_memory.append(Memory(state, action, reward, done, state1))
+                batch = np.random.choice(replay_memory, min(32, len(replay_memory)), False)
+            else:
+                batch = np.array([Memory(state, action, reward, done, state1)])
 
-            batch = np.random.choice(replay_memory, min(32, len(replay_memory)), False)
-
-            X, Y = processBatch(batch, df, DQN, DQN_target)
+            X, Y = None, None
+            if use_target:
+                X, Y = processBatch(batch, df, DQN, DQN_target)
+            else:
+                X, Y = processBatch(batch, df, DQN, DQN)
             DQN.fit(X, Y)
 
-            if frame % 50 == 0:
+            if frame % 50 == 0 and use_target:
                 DQN_target.setWeights(DQN.getWeights())
 
             state = state1
-
             frame += 1
             epsilon = max(epsilon - change, e_end)
-
-        rewards.append(totalReward)
+        last10_avg.append(totalReward)
+        rewards.append(sum(last10_avg)/float(len(last10_avg)))
         print('episode: {}, epsilon: {}, frames: {}, totalSteps: {}'.format(ep, epsilon, frame, totalReward))
 
-    plot_rewards(rewards)
+    return rewards
 
 if __name__ == "__main__":
-    train(300)
+    # random agent
+    plot_rewards(train(300, use_replay=True, use_target=False, rand_agent=False), './plots/learning_result_1.png', label='RM', plotnum=0)
+    plot_rewards(train(300, use_replay=False, use_target=True, rand_agent=False), './plots/learning_result_2.png', label='TN', plotnum=1)
+    plot_rewards(train(300, use_replay=True, use_target=True, rand_agent=False), './plots/learning_result_3.png', label='TM + RN', plotnum=2)
+    K.clear_session()
 
