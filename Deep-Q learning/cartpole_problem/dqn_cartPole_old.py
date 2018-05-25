@@ -168,7 +168,7 @@ def train(eps=100, use_replay=True, use_target=True, rand_agent=False):
 
 if __name__ == "__main__":
     # random agent
-    plot_rewards(train(300, use_replay=True, use_target=False, rand_agent=False), './plots/learning_result_1.png', label='RM', plotnum=0)
+    plot_rewards(train(300, use_replay=True, use_target=False, rand_agent=False), './plots/learning_result_11.png', label='RM', plotnum=0)
     plot_rewards(train(300, use_replay=False, use_target=True, rand_agent=False), './plots/learning_result_2.png', label='TN', plotnum=1)
     plot_rewards(train(300, use_replay=True, use_target=True, rand_agent=False), './plots/learning_result_3.png', label='TM + RN', plotnum=2)
     K.clear_session()
