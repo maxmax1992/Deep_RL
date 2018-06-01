@@ -1,4 +1,4 @@
-### Final version of my bachelor thesis can be viewed [here](https://github.com/openai/baselines)
+# Final version of my bachelor thesis can be viewed [here](https://drive.google.com/open?id=1ya0zllyNqXuvspiBOmSMDxCJpIf4K6Sq).
 
 # Deep RL
 Different reinforcement learning approaches.
