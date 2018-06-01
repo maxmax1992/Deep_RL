@@ -1,3 +1,5 @@
+### Final version of my bachelor thesis can be viewed [here](https://github.com/openai/baselines)
+
 # Deep RL
 Different reinforcement learning approaches.
 
@@ -16,4 +18,5 @@ cd Deep-Q\ Learning/
 ```
 python dqn_cartPole-v0.py
 ```
+
     
