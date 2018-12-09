@@ -99,7 +99,7 @@ class ConvNetCritic(nn.Module):
         self.fc5 = nn.Linear(512, 10)
         self.fc6 = nn.Linear(10, 1)
         self.optimizer = optim.Adam(self.parameters(), lr=1e-4)
-        self.savePATH = 'model_pong.pt'
+        self.savePATH = 'model_pong_actor.pt'
         if load_model:
             print('loaded model')
             self.load_model()
@@ -188,6 +188,7 @@ player = PongAi(env, player_id)
 env.set_names(player.get_name(), opponent.get_name())
 
 policy_network = ConvNetPG(load_model=args.resume)
+policy_critic = ConvNetPG(load_model=args.resume)
 
 MOVE_UP, MOVE_DOWN, STAY = 1, 2, 0
 
@@ -201,7 +202,7 @@ def discount_rewards(r):
         discounted_r[t] = running_add
     return discounted_r
 
-rewards, observations, actions, probs = [], [], [], []
+rewards, observations, actions, probs, critic_forwards = [], [], [], [], []
 last_100_ep_rewards = collections.deque(maxlen=100)
 for i in range(0, episodes):
     done = False
@@ -220,6 +221,8 @@ for i in range(0, episodes):
         probs.append(logProb)
         actions.append(action1)
         observations.append(last_3_frames)
+        # save to update later
+        critic_forwards.append(policy_critic.forward(last_3_frames))
 
         action2 = opponent.get_action()
         (ob1, ob2), (rew1, rew2), done, info = env.step((action1, action2))
@@ -259,14 +262,19 @@ for i in range(0, episodes):
                 # print('rewards', rewards)
                 ers = torch.tensor(ers).cuda()
                 ers = (ers - ers.mean()) / ers.std()
+                cfs = np.vstack(critic_forwards)
                 # print(eps)
                 # print('losses', eps)
                 # print('ers2', ers)
+
                 losses = torch.zeros(len(rewards)).cuda()
+                losses_critic = torch.zeros(len(rewards)).cuda()
                 for k in range(0, len(rewards)):
                     # print(f"epsi = {eps[i]}, ers_i = {# ers[i]}")
-                    losses[k] = -eps[k] * ers[k]
+                    losses[k] = -eps[k] * (ers[k] - cfs[k].item())
+                    losses_critic[k] = torch.pow(ers[k] - cfs[k], 2)
                     # print('losses_i', losses[i])
+
                 # print('losses_inner', losses)
                 policy_network.train(losses)
 
@@ -274,9 +282,10 @@ for i in range(0, episodes):
     # ep += 1
     # print('ssss')
     # print(type(i))
-    # if i % 100 == 0:
-    #     policy_network.save_model()
-    #     print("Mean reward from 100 last episodes", np.mean(last_100_ep_rewards), "on episode: ", i)
+    if i % 100 == 0:
+        policy_network.save_model()
+        policy_critic.save_model()
+        print("Mean reward from 100 last episodes", np.mean(last_100_ep_rewards), "on episode: ", i)
 
 
     # if len(rollout_p1) > 0:
