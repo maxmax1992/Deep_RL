@@ -89,6 +89,61 @@ class ConvNetPG(nn.Module):
         self.load_state_dict(torch.load(self.savePATH))
         # self.eval()
 
+class ConvNetCritic(nn.Module):
+    def __init__(self, in_channels=3, load_model=False):
+        super(ConvNetCritic, self).__init__()
+        self.conv1 = nn.Conv2d(in_channels, 32, kernel_size=8, stride=4)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
+        self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
+        self.fc4 = nn.Linear(5 * 4 * 64, 512)
+        self.fc5 = nn.Linear(512, 10)
+        self.fc6 = nn.Linear(10, 1)
+        self.optimizer = optim.Adam(self.parameters(), lr=1e-4)
+        self.savePATH = 'model_pong.pt'
+        if load_model:
+            print('loaded model')
+            self.load_model()
+
+
+    def forward(self, x):
+        # print('startforward_', x)
+        x = torch.from_numpy(x).cuda()
+        # print(x.size())
+        x = x.view((1, 3, 70, 67))
+        # print(x.size())
+        x = F.leaky_relu(self.conv1(x))
+        # print(x.size())
+        x = F.leaky_relu(self.conv2(x))
+        # print(x.size())
+        x = F.leaky_relu(self.conv3(x))
+        # print(x.size())
+        x = F.leaky_relu(self.fc4(x.view(x.size(0), -1)))
+        # print(x.size())
+        x = F.leaky_relu(self.fc5(x))
+        # print(x.size())
+        x = self.fc6(x)
+        return x
+
+    def train(self, losses):
+        # # losses = torch.from_numpy(losses)losses
+        # for loss in losses:
+        self.optimizer.zero_grad()
+        policy_loss = losses.sum()
+        # print('policy loss', policy_loss.item())
+        # print('losses', losses)
+        # # policy_loss.backward()
+        # print(policy_loss)
+        policy_loss.backward()
+        self.optimizer.step()
+
+
+    def save_model(self):
+        torch.save(self.state_dict(), self.savePATH)
+
+    def load_model(self):
+        self.load_state_dict(torch.load(self.savePATH))
+        # self.eval()
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--headless", action="store_true", help="Run in headless mode")
