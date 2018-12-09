@@ -1,9 +1,4 @@
 from pong import Pong
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-from random import randint
-import pickle
 import numpy as np
 from simple_ai import PongAi
 import argparse
@@ -11,13 +6,12 @@ import torch
 import torch.optim as optim
 from torch import nn
 from torch.nn import functional as F
-from PIL import Image
-from skimage.transform import resize
 np.set_printoptions(threshold=np.nan)
 import collections
 torch.set_default_tensor_type('torch.cuda.DoubleTensor')
 # CUDA
-# use_cuda = torch.cuda.is_available()
+use_cuda = torch.cuda.is_available()
+print('using cuda', use_cuda)
 # FloatTensor = torch.cuda.FloatTensor if use_cuda else torch.FloatTensor
 # LongTensor = torch.cuda.LongTensor if use_cuda else torch.LongTensor
 # Tensor = FloatTensor
@@ -240,17 +234,20 @@ for i in range(0, episodes):
             env.render()
         # update Policy Network
 
-        if frame % train_step == 0:
+        if frame % train_step == 0 or done:
             # train actor-critic params
             # print('preforming update of on network')
             # rewards here,
             ers = np.vstack(rewards)
             # make discounted rewards [G1, G2, G3 ... ]
             # print('ers1, ', ers)
-            ers = None
+            # ers = None
+
             if done:
-                ers = discount_rewards(ers, None)
+                ers = discount_rewards(ers)
+                print('done update')
             else:
+                print('episodic update')
                 ers = discount_rewards(ers, policy_critic.forward(last_3_frames).item())
             # print(ers)
             # print('rewards', ers.max())
@@ -269,7 +266,7 @@ for i in range(0, episodes):
             # print(eps)
             # print('losses', eps)
             # print('ers2', ers)
-            print(f"len_ers, {len(ers)}, len cfs: {len(cfs)}, len eps: {len(eps)}")
+            # print(f"len_ers, {len(ers)}, len cfs: {len(cfs)}, len eps: {len(eps)}")
 
             losses = torch.zeros(len(rewards)).cuda()
             losses_critic = torch.zeros(len(rewards)).cuda()
@@ -282,11 +279,11 @@ for i in range(0, episodes):
             # print('losses_inner', losses)
             policy_critic.train(losses_critic)
             policy_network.train(losses)
-
             rewards, observations, actions, probs, critic_forwards = [], [], [], [], []
 
         if done:
             last_100_ep_rewards.append(rew1)
+        frame += 1
 
     # ep += 1
     # print('ssss')
