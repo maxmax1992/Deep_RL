@@ -99,7 +99,7 @@ class ConvNetCritic(nn.Module):
         self.fc5 = nn.Linear(512, 10)
         self.fc6 = nn.Linear(10, 1)
         self.optimizer = optim.Adam(self.parameters(), lr=1e-4)
-        self.savePATH = 'model_pong_actor.pt'
+        self.savePATH = 'model_pong_critic.pt'
         if load_model:
             print('loaded model')
             self.load_model()
@@ -124,16 +124,16 @@ class ConvNetCritic(nn.Module):
         x = self.fc6(x)
         return x
 
-    def train(self, losses):
+    def train(self, critic_losses):
         # # losses = torch.from_numpy(losses)losses
         # for loss in losses:
         self.optimizer.zero_grad()
-        policy_loss = losses.sum()
+        critic_loss = critic_losses.sum()
         # print('policy loss', policy_loss.item())
         # print('losses', losses)
         # # policy_loss.backward()
         # print(policy_loss)
-        policy_loss.backward()
+        critic_loss.backward()
         self.optimizer.step()
 
 
@@ -188,7 +188,7 @@ player = PongAi(env, player_id)
 env.set_names(player.get_name(), opponent.get_name())
 
 policy_network = ConvNetPG(load_model=args.resume)
-policy_critic = ConvNetPG(load_model=args.resume)
+policy_critic = ConvNetCritic(load_model=args.resume)
 
 MOVE_UP, MOVE_DOWN, STAY = 1, 2, 0
 
@@ -210,7 +210,7 @@ for i in range(0, episodes):
     last_3_frames = np.zeros((3, 200, 210, 3))
     last_3_frames = np.array([prepro(frame) for frame in last_3_frames])
     ep = 1
-    batch_size = 5
+    batch_size = 1
     # iterate unless the episode is complete
     while not done:
         # get action and logprob
@@ -262,7 +262,7 @@ for i in range(0, episodes):
                 # print('rewards', rewards)
                 ers = torch.tensor(ers).cuda()
                 ers = (ers - ers.mean()) / ers.std()
-                cfs = np.vstack(critic_forwards)
+                cfs = torch.stack(critic_forwards)
                 # print(eps)
                 # print('losses', eps)
                 # print('ers2', ers)
@@ -272,13 +272,14 @@ for i in range(0, episodes):
                 for k in range(0, len(rewards)):
                     # print(f"epsi = {eps[i]}, ers_i = {# ers[i]}")
                     losses[k] = -eps[k] * (ers[k] - cfs[k].item())
-                    losses_critic[k] = torch.pow(ers[k] - cfs[k], 2)
+                    losses_critic[k] = - torch.pow(ers[k] - cfs[k], 2)
                     # print('losses_i', losses[i])
 
                 # print('losses_inner', losses)
+                policy_critic.train(losses_critic)
                 policy_network.train(losses)
 
-                rewards, observations, actions, probs = [], [], [], []
+                rewards, observations, actions, probs, critic_forwards = [], [], [], [], []
     # ep += 1
     # print('ssss')
     # print(type(i))
