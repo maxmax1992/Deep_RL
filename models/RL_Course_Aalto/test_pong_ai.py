@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from random import randint
 import pickle
 import numpy as np
-from simple_ai import PongAi, MyAi
+from simple_ai import PongAi
 import argparse
 import torch
 import torch.optim as optim
@@ -192,16 +192,19 @@ policy_critic = ConvNetCritic(load_model=args.resume)
 
 MOVE_UP, MOVE_DOWN, STAY = 1, 2, 0
 
-def discount_rewards(r):
+def discount_rewards(r, v_s=None):
     """ take 1D float array of rewards and compute discounted reward """
     discounted_r = np.zeros(len(r))
     running_add = 0
+    if v_s != None:
+        running_add = v_s
     for t in reversed(range(0, r.size)):
         if r[t] != 0: running_add = 0 # reset the sum, since this was a game boundary (pong specific!)
         running_add = running_add * gamma + r[t]
         discounted_r[t] = running_add
     return discounted_r
 
+train_step = 20
 rewards, observations, actions, probs, critic_forwards = [], [], [], [], []
 last_100_ep_rewards = collections.deque(maxlen=100)
 for i in range(0, episodes):
@@ -210,8 +213,8 @@ for i in range(0, episodes):
     last_3_frames = np.zeros((3, 200, 210, 3))
     last_3_frames = np.array([prepro(frame) for frame in last_3_frames])
     ep = 1
-    batch_size = 1
     # iterate unless the episode is complete
+    frame = 1
     while not done:
         # get action and logprob
         prob_up = policy_network.forward(last_3_frames)
@@ -226,7 +229,6 @@ for i in range(0, episodes):
 
         action2 = opponent.get_action()
         (ob1, ob2), (rew1, rew2), done, info = env.step((action1, action2))
-
         rewards.append(rew1)
 
         # update frames with new ones
@@ -237,49 +239,55 @@ for i in range(0, episodes):
         if not args.headless:
             env.render()
         # update Policy Network
+
+        if frame % train_step == 0:
+            # train actor-critic params
+            # print('preforming update of on network')
+            # rewards here,
+            ers = np.vstack(rewards)
+            # make discounted rewards [G1, G2, G3 ... ]
+            # print('ers1, ', ers)
+            ers = None
+            if done:
+                ers = discount_rewards(ers, None)
+            else:
+                ers = discount_rewards(ers, policy_critic.forward(last_3_frames).item())
+            # print(ers)
+            # print('rewards', ers.max())
+            # print('rewards min', ers.min())
+            eos = np.vstack(observations)
+            eas = np.vstack(actions)
+            # make the logs negative since we are using gradient ascent
+            eps = torch.stack(probs)
+            # print(ers.max(), ers.min())
+            ers = discount_rewards(ers)
+            # print(max(rewards), min(rewards))
+            # print('rewards', rewards)
+            ers = torch.tensor(ers).cuda()
+            ers = (ers - ers.mean()) / ers.std()
+            cfs = torch.stack(critic_forwards)
+            # print(eps)
+            # print('losses', eps)
+            # print('ers2', ers)
+            print(f"len_ers, {len(ers)}, len cfs: {len(cfs)}, len eps: {len(eps)}")
+
+            losses = torch.zeros(len(rewards)).cuda()
+            losses_critic = torch.zeros(len(rewards)).cuda()
+            for k in range(0, len(rewards)):
+                # print(f"epsi = {eps[i]}, ers_i = {# ers[i]}")
+                losses[k] = -eps[k] * (ers[k] - cfs[k].item())
+                losses_critic[k] = - torch.pow(ers[k] - cfs[k], 2)
+                # print('losses_i', losses[i])
+
+            # print('losses_inner', losses)
+            policy_critic.train(losses_critic)
+            policy_network.train(losses)
+
+            rewards, observations, actions, probs, critic_forwards = [], [], [], [], []
+
         if done:
-            # print('i', i)
-            # add last reward for book keeping 10 or -10
             last_100_ep_rewards.append(rew1)
-            if i % batch_size == 0:
-                # print('preforming update of on network')
-                # rewards here,
-                ers = np.vstack(rewards)
-                # make discounted rewards [G1, G2, G3 ... ]
-                # print('ers1, ', ers)
-                ers = discount_rewards(ers)
-                # print(ers)
-                # print('rewards', ers.max())
-                # print('rewards min', ers.min())
 
-                eos = np.vstack(observations)
-                eas = np.vstack(actions)
-                # make the logs negative since we are using gradient ascent
-                eps = torch.stack(probs)
-                # print(ers.max(), ers.min())
-                ers = discount_rewards(ers)
-                # print(max(rewards), min(rewards))
-                # print('rewards', rewards)
-                ers = torch.tensor(ers).cuda()
-                ers = (ers - ers.mean()) / ers.std()
-                cfs = torch.stack(critic_forwards)
-                # print(eps)
-                # print('losses', eps)
-                # print('ers2', ers)
-
-                losses = torch.zeros(len(rewards)).cuda()
-                losses_critic = torch.zeros(len(rewards)).cuda()
-                for k in range(0, len(rewards)):
-                    # print(f"epsi = {eps[i]}, ers_i = {# ers[i]}")
-                    losses[k] = -eps[k] * (ers[k] - cfs[k].item())
-                    losses_critic[k] = - torch.pow(ers[k] - cfs[k], 2)
-                    # print('losses_i', losses[i])
-
-                # print('losses_inner', losses)
-                policy_critic.train(losses_critic)
-                policy_network.train(losses)
-
-                rewards, observations, actions, probs, critic_forwards = [], [], [], [], []
     # ep += 1
     # print('ssss')
     # print(type(i))
