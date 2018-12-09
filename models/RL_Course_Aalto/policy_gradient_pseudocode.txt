@@ -1,0 +1,18 @@
+Bot perspectve:
+
+
+
+
+
+for i in num.episodes:
+    reward = 0
+    state = env.reset()
+
+    while environment is active
+
+        get best action from policy network
+        state, action
+
+
+
+
