@@ -35,7 +35,7 @@ class ConvNetPG(nn.Module):
         self.fc5 = nn.Linear(512, 10)
         self.fc6 = nn.Linear(10, 1)
         self.optimizer = optim.Adam(self.parameters(), lr=1e-4)
-        self.savePATH = 'model_pong.pt'
+        self.savePATH = 'model_pong_pos.pt'
         if load_model:
             print('loaded model')
             self.load_model()
@@ -93,7 +93,7 @@ class ConvNetCritic(nn.Module):
         self.fc5 = nn.Linear(512, 10)
         self.fc6 = nn.Linear(10, 1)
         self.optimizer = optim.Adam(self.parameters(), lr=1e-4)
-        self.savePATH = 'model_pong_critic.pt'
+        self.savePATH = 'model_pong_critic_pos.pt'
         if load_model:
             print('loaded model')
             self.load_model()
@@ -245,9 +245,9 @@ for i in range(0, episodes):
 
             if done:
                 ers = discount_rewards(ers)
-                print('done update')
+                # print('done update')
             else:
-                print('episodic update')
+                # print('episodic update')
                 ers = discount_rewards(ers, policy_critic.forward(last_3_frames).item())
             # print(ers)
             # print('rewards', ers.max())
@@ -273,7 +273,7 @@ for i in range(0, episodes):
             for k in range(0, len(rewards)):
                 # print(f"epsi = {eps[i]}, ers_i = {# ers[i]}")
                 losses[k] = -eps[k] * (ers[k] - cfs[k].item())
-                losses_critic[k] = - torch.pow(ers[k] - cfs[k], 2)
+                losses_critic[k] =  torch.pow(ers[k] - cfs[k], 2)
                 # print('losses_i', losses[i])
 
             # print('losses_inner', losses)

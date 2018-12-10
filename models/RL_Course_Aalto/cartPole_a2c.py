@@ -50,13 +50,10 @@ class CriticNN(nn.Module):
             m.weight.data.fill_(1e-3)
             m.bias.data.fill_(1e-3)
 
-    def train(self, loss, C):
+    def train(self, loss):
         self.optimizer.zero_grad()
         loss.backward()
-        for p in self.parameters():
-            p.grad *= C  # or whatever other operation
         self.optimizer.step()
-
 
 class ActorNN(nn.Module):
     def __init__(self, lr):
@@ -75,11 +72,9 @@ class ActorNN(nn.Module):
         x = torch.sigmoid(self.fc2(x))
         return x
 
-    def train(self, loss, C):
+    def train(self, loss):
         self.optimizer.zero_grad()
         loss.backward()
-        for p in self.parameters():
-            p.grad *= C  # or whatever other operation
         self.optimizer.step()
 
 
@@ -105,83 +100,60 @@ class ActorNN(nn.Module):
 #         return len(self.memory)
 
 
-actor = ActorNN(lr=1e-3)
-critic = CriticNN(lr=1e-3)
+actor = ActorNN(lr=1e-4)
+critic = CriticNN(lr=1e-4)
 critic.apply(critic.init_weights)
+env = gym.make('CartPole-v0')
+gamma = 0.99
 
-# props to karpathy
-def discount_rewards(r, gamma=0.99):
-  """ take 1D float array of rewards and compute discounted reward """
-  discounted_r = np.zeros_like(r)
-  running_add = 0
-  for t in reversed(xrange(0, r.size)):
-    if r[t] != 0: running_add = 0 # reset the sum, since this was a game boundary (pong specific!)
-    running_add = running_add * gamma + r[t]
-    discounted_r[t] = running_add
+# Compute discounted reward for reward rollouts
+def discount_rewards(r):
+    len = len(r)
+    return_arr = np.zeros(l)
+    i = len - 1
+    while i > 0:
+
   return discounted_r
 
 
-render = False
-env = gym.make('CartPole-v0')
-actor_update_freq = 10
-critic_update_freq = 1
-gamma = 0.99
+def finish_episode():
+    pass
+
+
+def select_action(obs):
+    left_prob = actor.forward(torch.from_numpy(obs).cuda())
+    action = 0 if np.random.uniform() < left_prob else 1
+    lprob = torch.log(left_prob) if action == 0 else torch.log(1 - left_prob)
+    return lprob, action
+
 log_freq = 100
 running_rewards = collections.deque(maxlen=log_freq)
-rewards, probs, actions, value_approx = [], [], [], []
 
+batch_size = 20
 for i_episode in range(1, 10000):
     done = False
-    losses_actor, losses_critic = [], []
     observation_prev = env.reset()
-    v_prev = critic.forward(observation_prev)
     ep_reward = 0
+    frame = 1
     while not done:
         # env.render()
-        left_prob = actor.forward(torch.from_numpy(observation_prev).cuda())
-        action = 0 if np.random.uniform() < left_prob else 1
-        lprob = torch.log(left_prob) if action == 0 else torch.log(1 - left_prob)
-        observation, reward, done, info = env.step(action)
+        lprob, action = select_action(observation_prev)
+        observation, reward, done, _ = env.step(action)
+        # Append the V(s)s
+        advantage = critic.forward(torch.from_numpy(observation_prev).cuda())
+        loss = torch.pow(ep_reward - advantage, 2)
+        critic.train(loss)
+        actor.train( - log_freq * (ep_reward - advantage).item())
         ep_reward += reward
-        if done:
-            reward = -2*ep_reward
 
-        """
-         For critic:
-         compute td error:
-         t_e = R + y*v(S, w) - v(S, w)
-         w = w + lr* o * grad(v(S, w))
+        if done or batch_size % frame == 0:
 
-         in the code: 
-         loss for critic = 
-         - td_error * v(S, w)
-        """
-        v_curr = critic.forward(observation)
 
-        torch_obs = None
-        if done:
-            torch_obs = 0
-        else:
-            # print(v_curr)
-            torch_obs = gamma * v_curr.item()
 
-        td_error = reward + torch_obs - v_prev.item()
+        frame += 1
 
-        critic.train(v_prev, -td_error)
 
-        actor.train(lprob, -td_error)
 
-        """
-            For critic:
-
-            0 = 0 + alpha*td_error* grad(log_prob(action))
-
-            in the code:
-             loss for actor = 
-             - td_error * logprob_action(a)
-            """
-        v_prev = v_curr
-        observation_prev = observation
 
     if i_episode % log_freq == 0:
         print(f"Episode: {i_episode}, last {log_freq} episodes mean reward: { np.mean(running_rewards)}")
