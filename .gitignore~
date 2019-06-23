@@ -4,4 +4,4 @@
 .baselines/
 /Keras_env/**
 /gym/*
-/baselines/*
+/baselines/**
