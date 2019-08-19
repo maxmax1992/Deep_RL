@@ -1,3 +1,6 @@
+### Recent replications of PG, A2C, and DQN, DQN with PER:
+can be viewed through Google Colab [here](https://colab.research.google.com/drive/1SNowHs-k9zpUSFfE_VoBWOvskSnqzWKV).
+
 #### Final version of my bachelor thesis can be viewed [here](https://drive.google.com/open?id=1ya0zllyNqXuvspiBOmSMDxCJpIf4K6Sq).
 
 # Deep RL
